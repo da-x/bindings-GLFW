@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <errno.h>
 
 // Action for EWMH client messages
 #define _NET_WM_STATE_REMOVE        0
@@ -1710,6 +1711,7 @@ void _glfwPlatformWaitEvents(void)
     if (!XPending(_glfw.x11.display))
     {
         fd_set fds;
+        int rc;
         const int fd = ConnectionNumber(_glfw.x11.display);
 
         FD_ZERO(&fds);
@@ -1718,8 +1720,9 @@ void _glfwPlatformWaitEvents(void)
         // select(1) is used instead of an X function like XNextEvent, as the
         // wait inside those are guarded by the mutex protecting the display
         // struct, locking out other threads from using X (including GLX)
-        if (select(fd + 1, &fds, NULL, NULL, NULL) < 0)
-            return;
+        do {
+                rc = select(fd + 1, &fds, NULL, NULL, NULL);
+        } while (-1 == rc && EINTR == errno);
     }
 
     _glfwPlatformPollEvents();
